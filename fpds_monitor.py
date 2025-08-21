@@ -13,7 +13,7 @@ DAYS_BACK     = int(os.getenv("DAYS_BACK", "30"))
 MAX_PAGES     = int(os.getenv("MAX_PAGES", "3"))
 STATE_FILE    = os.getenv("STATE_FILE", "fpds_seen.json")
 ADVANCED_SEARCH_URL = "https://www.fpds.gov/fpdsng_cms/index.php/en/advanced-search.html"
-RESULTS_WAIT_MS = 15000
+RESULTS_WAIT_MS = 45000
 # --------------------------------
 
 def date_range_last_n_days(n: int):
