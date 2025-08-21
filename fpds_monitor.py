@@ -190,14 +190,28 @@ async def run_once() -> List[Dict]:
             'button[type="submit"]', 'text=Search'
         ])
 
-        await page.wait_for_timeout(1500)
+        await page.wait_for_timeout(4500)
         try:
-            await page.wait_for_selector("table", timeout=RESULTS_WAIT_MS)
-        except TimeoutError:
-            pass
+                    # 4) Wait for results to render (be generous; FPDS can be slow)
+        await page.wait_for_timeout(4500)  # small pause for initial layout
+        try:
+            # Try a few selectors that commonly represent the results table
+            await page.wait_for_selector(
+                'table, #searchResults table, table.results, div.results table',
+                state='visible',
+                timeout=RESULTS_WAIT_MS
+            )
+        except PlaywrightTimeoutError:
+            # Send a friendly notice instead of crashing the job
+            send_discord(f"⚠️ FPDS monitor: no results table appeared within {RESULTS_WAIT_MS/1000:.0f}s (site slow or no data).")
+            return []
 
+        # 5) Parse first page
         html = await page.content()
-        results = parse_results_table(html)
+        page_results = parse_results_table(html)
+        if not page_results:
+            send_discord("ℹ️ FPDS monitor: results table found but no rows parsed (filters may have no matches).")
+        results_collected.extend(page_results)
 
         pages_done = 1
         while pages_done < MAX_PAGES:
