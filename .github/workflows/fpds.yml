@@ -1,0 +1,51 @@
+name: FPDS Monitor
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # every 15 minutes
+  workflow_dispatch: {}       # allow manual run
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # to commit updated state file back to the repo
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python -m playwright install
+          python -m playwright install-deps
+
+      - name: Run monitor
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          AGENCY_NAME: "DEPT OF THE NAVY"
+          NAICS_CODE: "531311"
+          PSC_CODE: "R799"
+          DAYS_BACK: "30"
+          MAX_PAGES: "3"
+          STATE_FILE: "fpds_seen.json"
+        run: |
+          python fpds_monitor.py
+
+      - name: Commit state if changed
+        run: |
+          if [ -n "$(git status --porcelain fpds_seen.json)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add fpds_seen.json
+            git commit -m "Update state [skip ci]"
+            git push
+          else
+            echo "No state changes."
+          fi
